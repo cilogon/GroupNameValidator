@@ -3,6 +3,7 @@
 App::uses('CakeEventListener', 'Event');
 App::uses('CakeEvent', 'Event');
 App::uses('CakeSession', 'Model/Datasource');
+App::uses("GroupNameValidator", "GroupNameValidator.Model");
 
 class GroupNameValidatorListener implements CakeEventListener {
 
@@ -23,13 +24,8 @@ class GroupNameValidatorListener implements CakeEventListener {
 
     // Grab the data being used for the save action.
     $group = $model->data;
-
-    // Only intercept CoGroup for our configured CO.
-    $coId = Configure::read('GroupNameValidator.co_id');
-    if($group['CoGroup']['co_id'] != $coId) {
-      return true;
-    }
-
+ 
+    
     // Only intercept standard groups and not auto groups.
     if(!empty($group['CoGroup']['group_type'])) {
       if($group['CoGroup']['group_type'] != GroupEnum::Standard) {
@@ -43,9 +39,33 @@ class GroupNameValidatorListener implements CakeEventListener {
       }
     }
 
+    //Get the Group Name Validator, if there is one, for this CO. There should only be one that is active for the COa
+
+    $coId = $group['CoGroup']['co_id'];
+
+    $validatorModel = new GroupNameValidator();
+
+    $args = array();
+    $args['conditions']['co_id'] = $coId;
+    $args['conditions']['GroupNameValidator.status'] = SuspendableStatusEnum::Active;
+    $arg['contain'] = true;
+ 
+    $validators = $validatorModel->find('all', $args);
+    
+    //we should never have more than one. This shouldn't be possible but check anyway.
+    if (count($validators) > 1) {
+      //throw new RuntimeException(_txt('er.db.save'));
+      throw new RuntimeException(_txt('er.gnv.multiple_active'));
+    }
+   
+    //check if empty 
+    if (empty($validators)) {
+       return true;
+    }
+
     // Test the group name against the configured regular expression
     // and intercept any names that do not match.
-    $pattern = Configure::read('GroupNameValidator.pattern');
+    $pattern = $validators[0]['GroupNameValidator']['name_format'];
 
     $match = preg_match($pattern, $group['CoGroup']['name']);
 
@@ -54,10 +74,10 @@ class GroupNameValidatorListener implements CakeEventListener {
     } else {
       // Set the Message stored in the session and used by the Flash component.
       // We append a new message to any existing messasges.
-      $messages = (array)CakeSession::read('Message.' . $options['key']);
+      $messages = (array)CakeSession::read('Message');
 
       $newMessage = array(
-        'message' => Configure::read('GroupNameValidator.flash_error_text'),
+        'message' => $validators[0]['GroupNameValidator']['error_message'], 
         'key' => 'error',
         'element' => 'default',
         'params' => array()
