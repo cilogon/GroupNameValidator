@@ -15,6 +15,6 @@ The configurable fields are:
 
 Only one group validator may be active at a time. The "add" button above the index page will not be active when there is already an active Group Name Validator. 
 
-The Group Name Validator only checks regular group names at Save time. It does not change regular group names that have already been created. However,the currently active validator will cause an already created regular group to not save if, for instance, the group membership is changed and the name does not match the required name format. 
+The Group Name Validator only checks regular group names at Save time. It does not change regular group names that have already been created. However,the currently active validator will display an error if an already created regular group is edited and, upon save, the name does not match the required name format. 
 
 The Group Name Validator and the Group Name Reservation plugins should not be used on the same CO at the same time. 
