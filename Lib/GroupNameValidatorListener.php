@@ -3,6 +3,7 @@
 App::uses('CakeEventListener', 'Event');
 App::uses('CakeEvent', 'Event');
 App::uses('CakeSession', 'Model/Datasource');
+App::uses('Router', 'Routing');
 App::uses("GroupNameValidator", "GroupNameValidator.Model");
 
 class GroupNameValidatorListener implements CakeEventListener {
@@ -72,20 +73,27 @@ class GroupNameValidatorListener implements CakeEventListener {
     if($match == 1) {
       return true;
     } else {
-      // Set the Message stored in the session and used by the Flash component.
-      // We append a new message to any existing messasges.
-      $messages = (array)CakeSession::read('Message');
+      
+      //check whether this request came from the API. If so throw an exception with the configured error message. Otherwise add it to the flash.
+      $request = Router::getRequest();
+      if ($request->is('restful')) {
+        throw new ForbiddenException($validators[0]['GroupNameValidator']['error_message']);
+      } else {
+        // Set the Message stored in the session and used by the Flash component.
+        // We append a new message to any existing messasges.
+        $messages = (array)CakeSession::read('Message');
 
-      $newMessage = array(
-        'message' => $validators[0]['GroupNameValidator']['error_message'], 
-        'key' => 'error',
-        'element' => 'default',
-        'params' => array()
-      );
+        $newMessage = array(
+          'message' => $validators[0]['GroupNameValidator']['error_message'], 
+          'key' => 'error',
+          'element' => 'default',
+          'params' => array()
+        );
 
-      $messages[] = $newMessage;
+        $messages[] = $newMessage;
 
-      CakeSession::write('Message.' . 'error', $messages);
+        CakeSession::write('Message.' . 'error', $messages);
+      }
 
       // Return false to prevent the save.
       return false;
